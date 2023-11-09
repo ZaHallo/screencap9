@@ -6,15 +6,20 @@ from requests import request
 import time
 from tkinter import *
 from tkinter.ttk import *
+from tkinter import messagebox
 
 root = Tk()
 root.title = "carryover9"
 root.geometry('200x150')
 varStatus = StringVar()
-varEntered = StringVar()
+varEntered = IntVar()
+varEntered.set(0)
+varScreenShowChanged = BooleanVar()
+varScreenShowChanged.set(False)
 txtStatus = Label(root, textvariable=varStatus)
-txtboxSharename = Text(root)
-btnSubmit = Button(root, command=lambda:varEntered.set("1"))
+txtboxSharename = Entry(root, justify="center")
+btnSubmit = Button(root, text="Submit", command=lambda:varEntered.set(varEntered.get()+1))
+# btnShowScreen = Button(root, text="Show Screen", command=lambda:var)
 
 txtStatus.pack(side="top")
 
@@ -22,20 +27,51 @@ def status(txt):
     varStatus.set(txt)
 
 BASEURL = "https://carryover.nerdakus.repl.co/"
-status("pinging server...")
+status("Pinging server...")
 request("GET", BASEURL)
 txtboxSharename.pack(side="top")
 btnSubmit.pack(side="top")
-status("enter sharename")
+
+status("Enter custom ID")
 root.wait_variable(varEntered)
-btnSubmit.destroy()
+btnSubmit['state'] = DISABLED
 name = txtboxSharename.get()
+
+txtboxSharename.delete(0, len(name))
+txtboxSharename['show'] = "*"
+status("Enter control password")
+btnSubmit['state'] = NORMAL
+root.wait_variable(varEntered)
+btnSubmit['state'] = DISABLED
+control = txtboxSharename.get()
 txtboxSharename.destroy()
+
+status("Starting host...")
 res = request("POST", BASEURL+"reg/"+name)
-status(res.text)
+if not res.ok:
+    status("Could not start. Exiting in 3")
+    time.sleep(3)
+    exit(-1)
+status("Hosting as '"+name+"'")
+
+isQuit = False
+
+def on_closing():
+    global isQuit
+    btnSubmit['state'] = DISABLED
+    isQuit = True
+    root.destroy()
+
+btnSubmit['text'] = "Stop"
+btnSubmit.configure(text="Stop", command=on_closing)
+btnSubmit['state'] = NORMAL
+
+root.protocol("WM_DELETE_WINDOW", on_closing)
 
 sct = mss()
 while True:
+    if isQuit:
+        break
     root.update()
     sct_img = sct.grab(sct.monitors[0])
     matlik = np.array(sct_img)
