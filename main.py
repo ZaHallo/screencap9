@@ -14,6 +14,7 @@ varStatus = StringVar()
 varEntered = StringVar()
 txtStatus = Label(root, textvariable=varStatus)
 txtboxSharename = Text(root)
+btnSubmit = Button(root, command=lambda:varEntered.set("1"))
 
 txtStatus.pack(side="top")
 
@@ -24,8 +25,12 @@ BASEURL = "https://carryover.nerdakus.repl.co/"
 status("pinging server...")
 request("GET", BASEURL)
 txtboxSharename.pack(side="top")
+btnSubmit.pack(side="top")
 status("enter sharename")
-varEntered.wai
+root.wait_variable(varEntered)
+btnSubmit.destroy()
+name = txtboxSharename.get()
+txtboxSharename.destroy()
 res = request("POST", BASEURL+"reg/"+name)
 status(res.text)
 
