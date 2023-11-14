@@ -7,6 +7,7 @@ import time
 from tkinter import *
 from tkinter.ttk import *
 from tkinter import messagebox
+from threading import Thread
 
 root = Tk()
 root.title = "carryover9"
@@ -32,6 +33,11 @@ request("GET", BASEURL)
 txtboxSharename.pack(side="top")
 btnSubmit.pack(side="top")
 
+def tmp_close():
+    varEntered.set(999)
+    root.destroy()
+root.protocol("WM_DELETE_WINDOW", tmp_close)
+
 status("Enter custom ID")
 root.wait_variable(varEntered)
 btnSubmit['state'] = DISABLED
@@ -46,18 +52,23 @@ btnSubmit['state'] = DISABLED
 control = txtboxSharename.get()
 txtboxSharename.destroy()
 
+def exitError(txt):
+    status(txt)
+    time.sleep(3)
+    root.destroy()
+
 status("Starting host...")
 res = request("POST", BASEURL+"reg/"+name)
 if not res.ok:
-    status("Could not start. Exiting in 3")
-    time.sleep(3)
-    exit(-1)
+    Thread(target=exitError, args=["Failed to start. "+str(res.status_code)]).start()
+    root.mainloop()
 status("Hosting as '"+name+"'")
 
 isQuit = False
 
 def on_closing():
     global isQuit
+    btnShowScreen['state'] = DISABLED
     btnSubmit['state'] = DISABLED
     isQuit = True
     root.destroy()
@@ -66,8 +77,14 @@ btnSubmit['text'] = "Stop"
 btnSubmit.configure(text="Stop", command=on_closing)
 btnSubmit['state'] = NORMAL
 
+btnShowScreen.pack(side="top")
+
 root.protocol("WM_DELETE_WINDOW", on_closing)
 
+postSpacing = 0.2
+
+lastPost = time.time()
+screenActive = False
 sct = mss()
 while True:
     if isQuit:
@@ -78,8 +95,16 @@ while True:
     # print(len(matlik))
     # matlik = cv2.resize(matlik, dsize=(int(m1.width/16), int(m1.height/16)))
     res = cv2.resize(matlik, None, fx=0.5, fy=0.5, interpolation=cv2.INTER_NEAREST)
-    cv2.imshow('screen', res)
 
-    if (cv2.waitKey(1) & 0xFF) == ord('q'):
-        cv2.destroyAllWindows()
-        break
+    if time.time()-lastPost >= postSpacing:
+        request("POST")
+
+    if varScreenShow.get():
+        cv2.imshow('screen', res)
+        if not screenActive:
+            screenActive = True
+            btnShowScreen.configure(text="Hide Screen")
+    elif screenActive:
+        screenActive = False
+        cv2.destroyWindow('screen')
+        btnShowScreen.configure(text="Show Screen")
