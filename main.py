@@ -2,15 +2,19 @@ import numpy as np
 import cv2
 from mss import mss
 from PIL import Image
-from requests import request
+import requests
 import time
 from tkinter import *
 from tkinter.ttk import *
 from tkinter import messagebox
 from threading import Thread
 import json
-import urllib3
-# from urllib3 import request
+import lz4.frame
+from flask_socketio import SocketIO
+from flask import Flask, request
+
+app = Flask(__name__)
+dts = SocketIO(app)
 
 root = Tk()
 root.title = "carryover9"
@@ -32,7 +36,7 @@ def status(txt):
 
 BASEURL = "https://carryover.nerdakus.repl.co/"
 status("Pinging server...")
-req = request("GET", BASEURL)
+req = requests.request("GET", BASEURL)
 txtboxSharename.pack(side="top")
 btnSubmit.pack(side="top")
 
@@ -61,11 +65,12 @@ def exitError(txt):
     root.destroy()
 
 status("Starting host...")
-res = request("POST", BASEURL+"reg/"+name+"?key="+control)
+res = requests.request("POST", BASEURL+"reg/"+name+"?key="+control)
 print(res)
 if not res.ok:
     Thread(target=exitError, args=["Failed to start. "+str(res.status_code)]).start()
     root.mainloop()
+Thread(target=lambda: dts.run(app, "127.0.0.1", 5000)).start()
 status("Hosting as '"+name+"'")
 
 isQuit = False
@@ -103,7 +108,8 @@ while True:
     if time.time()-lastPost >= postSpacing:
         lastPost = time.time()
         status("posting...")
-        request("POST", BASEURL+"post/"+name+"/", data=json.dumps(res.tolist()))
+        data = lz4.frame.compress(bytes(json.dumps(res.tolist())))
+        requests.request("POST", BASEURL+"post/"+name+"/", data=data)
         status("posted")
 
     if varScreenShow.get():
