@@ -8,6 +8,9 @@ from tkinter import *
 from tkinter.ttk import *
 from tkinter import messagebox
 from threading import Thread
+import json
+import urllib3
+# from urllib3 import request
 
 root = Tk()
 root.title = "carryover9"
@@ -29,7 +32,7 @@ def status(txt):
 
 BASEURL = "https://carryover.nerdakus.repl.co/"
 status("Pinging server...")
-request("GET", BASEURL)
+req = request("GET", BASEURL)
 txtboxSharename.pack(side="top")
 btnSubmit.pack(side="top")
 
@@ -58,7 +61,8 @@ def exitError(txt):
     root.destroy()
 
 status("Starting host...")
-res = request("POST", BASEURL+"reg/"+name)
+res = request("POST", BASEURL+"reg/"+name+"?key="+control)
+print(res)
 if not res.ok:
     Thread(target=exitError, args=["Failed to start. "+str(res.status_code)]).start()
     root.mainloop()
@@ -81,7 +85,7 @@ btnShowScreen.pack(side="top")
 
 root.protocol("WM_DELETE_WINDOW", on_closing)
 
-postSpacing = 0.2
+postSpacing = 2
 
 lastPost = time.time()
 screenActive = False
@@ -94,10 +98,13 @@ while True:
     matlik = np.array(sct_img)
     # print(len(matlik))
     # matlik = cv2.resize(matlik, dsize=(int(m1.width/16), int(m1.height/16)))
-    res = cv2.resize(matlik, None, fx=0.5, fy=0.5, interpolation=cv2.INTER_NEAREST)
+    res = cv2.resize(matlik, None, fx=0.3, fy=0.3, interpolation=cv2.INTER_LANCZOS4)
 
     if time.time()-lastPost >= postSpacing:
-        request("POST")
+        lastPost = time.time()
+        status("posting...")
+        request("POST", BASEURL+"post/"+name+"/", data=json.dumps(res.tolist()))
+        status("posted")
 
     if varScreenShow.get():
         cv2.imshow('screen', res)

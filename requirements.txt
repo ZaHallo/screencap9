@@ -1,0 +1,4 @@
+ndg-httpsclient
+pyopenssl
+pyasn1
+lz4
