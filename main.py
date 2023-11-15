@@ -10,11 +10,9 @@ from tkinter import messagebox
 from threading import Thread
 import json
 import lz4.frame
-from flask_socketio import SocketIO
-from flask import Flask, request
+import websocket
 
-app = Flask(__name__)
-dts = SocketIO(app)
+dts = websocket.WebSocket()
 
 root = Tk()
 root.title = "carryover9"
@@ -70,7 +68,7 @@ print(res)
 if not res.ok:
     Thread(target=exitError, args=["Failed to start. "+str(res.status_code)]).start()
     root.mainloop()
-Thread(target=lambda: dts.run(app, "127.0.0.1", 5000)).start()
+dts.connect("wss://carryover.nerdakus.repl.co/")
 status("Hosting as '"+name+"'")
 
 isQuit = False
@@ -81,6 +79,14 @@ def on_closing():
     btnSubmit['state'] = DISABLED
     isQuit = True
     root.destroy()
+
+websocket.enableTrace(True)
+def WebsocketHandler():
+    while True:
+        data = dts.recv()
+
+
+Thread(target=WebsocketHandler).start()
 
 btnSubmit['text'] = "Stop"
 btnSubmit.configure(text="Stop", command=on_closing)
@@ -108,8 +114,7 @@ while True:
     if time.time()-lastPost >= postSpacing:
         lastPost = time.time()
         status("posting...")
-        data = lz4.frame.compress(bytes(json.dumps(res.tolist())))
-        requests.request("POST", BASEURL+"post/"+name+"/", data=data)
+        dts.emit('update')
         status("posted")
 
     if varScreenShow.get():
