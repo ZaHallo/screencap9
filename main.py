@@ -10,9 +10,11 @@ from tkinter import messagebox
 from threading import Thread
 import json
 import lz4.frame
-import websocket
+import asyncio
+import ssl
+from websockets import client
 
-dts = websocket.WebSocket()
+CERT = ssl.SSLContext()
 
 root = Tk()
 root.title = "carryover9"
@@ -32,7 +34,7 @@ txtStatus.pack(side="top")
 def status(txt):
     varStatus.set(txt)
 
-BASEURL = "https://carryover.nerdakus.repl.co/"
+BASEURL = "https://bruh2.orangetomato.repl.co/"
 status("Pinging server...")
 req = requests.request("GET", BASEURL)
 txtboxSharename.pack(side="top")
@@ -68,7 +70,7 @@ print(res)
 if not res.ok:
     Thread(target=exitError, args=["Failed to start. "+str(res.status_code)]).start()
     root.mainloop()
-dts.connect("wss://carryover.nerdakus.repl.co/")
+time.sleep(0.2)
 status("Hosting as '"+name+"'")
 
 isQuit = False
@@ -80,10 +82,9 @@ def on_closing():
     isQuit = True
     root.destroy()
 
-websocket.enableTrace(True)
+# websocket.enableTrace(True)
 def WebsocketHandler():
-    while True:
-        data = dts.recv()
+    with 
 
 
 Thread(target=WebsocketHandler).start()
@@ -113,9 +114,6 @@ while True:
 
     if time.time()-lastPost >= postSpacing:
         lastPost = time.time()
-        status("posting...")
-        dts.emit('update')
-        status("posted")
 
     if varScreenShow.get():
         cv2.imshow('screen', res)
