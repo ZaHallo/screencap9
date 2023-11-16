@@ -14,8 +14,6 @@ import asyncio
 import ssl
 from websockets import client
 
-CERT = ssl.SSLContext()
-
 root = Tk()
 root.title = "carryover9"
 root.geometry('200x150')
@@ -35,10 +33,13 @@ def status(txt):
     varStatus.set(txt)
 
 BASEURL = "https://bruh2.orangetomato.repl.co/"
+BASEHOOKURL = "wss://bruh2.orangetomato.repl.co/ws"
 status("Pinging server...")
 req = requests.request("GET", BASEURL)
 txtboxSharename.pack(side="top")
 btnSubmit.pack(side="top")
+
+CERT = ssl.SSLContext()
 
 def tmp_close():
     varEntered.set(999)
@@ -82,12 +83,21 @@ def on_closing():
     isQuit = True
     root.destroy()
 
+loop = asyncio.get_event_loop()
+
+async def MakeWebsocket():
+    return await client.connect(uri=BASEHOOKURL, ssl=CERT)
+
+websocket = asyncio.get_event_loop()(MakeWebsocket())
+
 # websocket.enableTrace(True)
-def WebsocketHandler():
-    with 
+async def WebsocketHandler():
+    while True:
+        data = await websocket.recv()
+        print("DATA GOT???")
+        print(data)
 
-
-Thread(target=WebsocketHandler).start()
+asyncio.run(WebsocketHandler())
 
 btnSubmit['text'] = "Stop"
 btnSubmit.configure(text="Stop", command=on_closing)
@@ -114,6 +124,7 @@ while True:
 
     if time.time()-lastPost >= postSpacing:
         lastPost = time.time()
+        websocket
 
     if varScreenShow.get():
         cv2.imshow('screen', res)
