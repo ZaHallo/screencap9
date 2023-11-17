@@ -88,16 +88,15 @@ loop = asyncio.get_event_loop()
 async def MakeWebsocket():
     return await client.connect(uri=BASEHOOKURL, ssl=CERT)
 
-websocket = asyncio.get_event_loop()(MakeWebsocket())
+websocket = asyncio.run(MakeWebsocket())
 
 # websocket.enableTrace(True)
 async def WebsocketHandler():
-    while True:
-        data = await websocket.recv()
-        print("DATA GOT???")
-        print(data)
+    data = await websocket.recv()
+    print("DATA GOT???")
+    print(data)
 
-asyncio.run(WebsocketHandler())
+loop.create_task(WebsocketHandler())
 
 btnSubmit['text'] = "Stop"
 btnSubmit.configure(text="Stop", command=on_closing)
@@ -124,7 +123,8 @@ while True:
 
     if time.time()-lastPost >= postSpacing:
         lastPost = time.time()
-        websocket
+        jsonDump = json.dumps(res.tolist())
+        websocket.send(jsonDump)
 
     if varScreenShow.get():
         cv2.imshow('screen', res)
