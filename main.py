@@ -12,6 +12,7 @@ import json
 import lz4.frame
 import asyncio
 import ssl
+import os
 from websockets import client
 
 root = Tk()
@@ -40,6 +41,8 @@ txtboxSharename.pack(side="top")
 btnSubmit.pack(side="top")
 
 CERT = ssl.SSLContext()
+
+os.system("clear")
 
 def tmp_close():
     varEntered.set(999)
@@ -85,22 +88,30 @@ def on_closing():
 
 loop = asyncio.get_event_loop()
 
+websocket = None
 async def MakeWebsocket():
-    return await client.connect(uri=BASEHOOKURL, ssl=CERT)
+    global websocket
+    websocket = await client.connect(uri=BASEHOOKURL, ssl=CERT)
 
-websocket = asyncio.run(MakeWebsocket())
-
-CurrentWebsocketData = []
+CurrentWebsocketData = {'name':name,'screen':[]}
 
 # websocket.enableTrace(True)
 async def WebsocketHandler():
+    print("runnin")
+    global websocket
     global CurrentWebsocketData
-    websocket.send(CurrentWebsocketData)
+    if websocket is None:
+        await MakeWebsocket()
+    print("stage1")
+    await websocket.send(json.dumps(CurrentWebsocketData))
+    print("stage2")
     data = await websocket.recv()
     print("DATA GOT???")
     print(data)
 
-loop.create_task(WebsocketHandler())
+loop.(WebsocketHandler())
+
+Thread(target=loop.run_forever).start()
 
 btnSubmit['text'] = "Stop"
 btnSubmit.configure(text="Stop", command=on_closing)
@@ -127,7 +138,7 @@ while True:
 
     if time.time()-lastPost >= postSpacing:
         lastPost = time.time()
-        CurrentWebsocketData = json.dumps(res.tolist())
+        CurrentWebsocketData['screen'] = res.tolist()
 
     if varScreenShow.get():
         cv2.imshow('screen', res)
