@@ -90,8 +90,12 @@ async def MakeWebsocket():
 
 websocket = asyncio.run(MakeWebsocket())
 
+CurrentWebsocketData = []
+
 # websocket.enableTrace(True)
 async def WebsocketHandler():
+    global CurrentWebsocketData
+    websocket.send(CurrentWebsocketData)
     data = await websocket.recv()
     print("DATA GOT???")
     print(data)
@@ -123,8 +127,7 @@ while True:
 
     if time.time()-lastPost >= postSpacing:
         lastPost = time.time()
-        jsonDump = json.dumps(res.tolist())
-        websocket.send(jsonDump)
+        CurrentWebsocketData = json.dumps(res.tolist())
 
     if varScreenShow.get():
         cv2.imshow('screen', res)
