@@ -129,7 +129,14 @@ async def Main():
             CurrentWebsocketData = res.tolist()
             comp = json.dumps(CurrentWebsocketData)
             comp = zlib.compress(comp.encode())
-            await websocket.send(json.dumps({'type':'update','data':{'name':name,'screen':json.dumps(CurrentWebsocketData)}}))
+            try:
+                await websocket.send(json.dumps({'type':'update','data':{'name':name,'screen':json.dumps(CurrentWebsocketData)}}))
+                await websocket.recv()
+            except Exception as e:
+                with open("logfile.txt", mode="a") as f:
+                    f.write(str(e)+"\n")
+                break
+
 
         if varScreenShow.get():
             cv2.imshow('screen', res)
@@ -141,6 +148,8 @@ async def Main():
             cv2.destroyWindow('screen')
             btnShowScreen.configure(text="Show Screen")
     
+    root.destroy()
+    exit()
 # async def WebsocketHandler():
 #     print('stg0')
 #     while True:
