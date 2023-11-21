@@ -9,11 +9,11 @@ from tkinter.ttk import *
 from tkinter import messagebox
 from threading import Thread
 import json
-import lz4.frame
+import zlib
 import asyncio
 import ssl
 import os
-from websockets import client
+import websockets
 
 root = Tk()
 root.title = "carryover9"
@@ -34,50 +34,12 @@ def status(txt):
     varStatus.set(txt)
 
 BASEURL = "https://bruh2.orangetomato.repl.co/"
-BASEHOOKURL = "wss://bruh2.orangetomato.repl.co/ws"
+BASEHOOKURL = "wss://bruh2.orangetomato.repl.co/"
 status("Pinging server...")
 req = requests.request("GET", BASEURL)
 txtboxSharename.pack(side="top")
 btnSubmit.pack(side="top")
-
-CERT = ssl.SSLContext()
-
-os.system("clear")
-
-def tmp_close():
-    varEntered.set(999)
-    root.destroy()
-root.protocol("WM_DELETE_WINDOW", tmp_close)
-
-status("Enter custom ID")
-root.wait_variable(varEntered)
-btnSubmit['state'] = DISABLED
-name = txtboxSharename.get()
-
-txtboxSharename.delete(0, len(name))
-txtboxSharename['show'] = "*"
-status("Enter control password")
-btnSubmit['state'] = NORMAL
-root.wait_variable(varEntered)
-btnSubmit['state'] = DISABLED
-control = txtboxSharename.get()
-txtboxSharename.destroy()
-
-def exitError(txt):
-    status(txt)
-    time.sleep(3)
-    root.destroy()
-
-status("Starting host...")
-res = requests.request("POST", BASEURL+"reg/"+name+"?key="+control)
-print(res)
-if not res.ok:
-    Thread(target=exitError, args=["Failed to start. "+str(res.status_code)]).start()
-    root.mainloop()
-time.sleep(0.2)
-status("Hosting as '"+name+"'")
-
-isQuit = False
+root.update()
 
 def on_closing():
     global isQuit
@@ -86,60 +48,111 @@ def on_closing():
     isQuit = True
     root.destroy()
 
-loop = asyncio.get_event_loop()
+def exitError(txt):
+    status(txt)
+    root.update()
+    time.sleep(3)
+    root.destroy()
+    exit()
 
-async def MakeWebsocket():
-    return await client.connect(uri=BASEHOOKURL, ssl=CERT)
+    # Thread(target=exitError, args=["Failed to open webhook. "+str(websocket.close_code)+"\n"+str(websocket.close_reason)]).start()
 
-websocket = asyncio.run(MakeWebsocket())
+# CERT = ssl.SSLContext()
 
-CurrentWebsocketData = []
+os.system("clear")
+
+def tmp_close():
+    varEntered.set(999)
+    root.destroy()
 
 # websocket.enableTrace(True)
-async def WebsocketHandler():
-    global CurrentWebsocketData
-    websocket.send(CurrentWebsocketData)
-    data = await websocket.recv()
-    print("DATA GOT???")
-    print(data)
+async def Main():
+    root.protocol("WM_DELETE_WINDOW", tmp_close)
 
-loop.create_task(WebsocketHandler())
+    websocket = await websockets.connect(uri=BASEHOOKURL)
+    if websocket.closed:
+        exitError("Failed to open webhook. "+str(websocket.close_code)+"\n"+str(websocket.close_reason))
 
-Thread(target=loop.run_forever).start()
+    status("Enter custom ID")
+    root.wait_variable(varEntered)
+    btnSubmit['state'] = DISABLED
+    name = txtboxSharename.get()
 
-btnSubmit['text'] = "Stop"
-btnSubmit.configure(text="Stop", command=on_closing)
-btnSubmit['state'] = NORMAL
+    txtboxSharename.delete(0, len(name))
+    txtboxSharename['show'] = "*"
+    status("Enter control password")
+    btnSubmit['state'] = NORMAL
+    root.wait_variable(varEntered)
+    btnSubmit['state'] = DISABLED
+    control = txtboxSharename.get()
+    txtboxSharename.destroy()
 
-btnShowScreen.pack(side="top")
+    status("Starting host...")
+    await websocket.send(json.dumps({'type':'start','data':{'name':name,'key':control}}))
+    res = await websocket.recv()
 
-root.protocol("WM_DELETE_WINDOW", on_closing)
+    isQuit = False
 
-postSpacing = 2
+    loop = asyncio.get_event_loop()
 
-lastPost = time.time()
-screenActive = False
-sct = mss()
-while True:
-    if isQuit:
-        break
-    root.update()
-    sct_img = sct.grab(sct.monitors[0])
-    matlik = np.array(sct_img)
+    time.sleep(0.2)
+    status("Hosting as '"+name+"'")
+
+    CurrentWebsocketData = []
+
+    btnSubmit['text'] = "Stop"
+    btnSubmit.configure(text="Stop", command=on_closing)
+    btnSubmit['state'] = NORMAL
+
+    btnShowScreen.pack(side="top")
+
+    root.protocol("WM_DELETE_WINDOW", on_closing)
+
+    postSpacing = 2
+
+    lastPost = time.time()
+    screenActive = False
+    sct = mss()
+
+    while True:
+        if isQuit:
+            break
+        root.update()
+        sct_img = sct.grab(sct.monitors[0])
+        matlik = np.array(sct_img)
     # print(len(matlik))
     # matlik = cv2.resize(matlik, dsize=(int(m1.width/16), int(m1.height/16)))
-    res = cv2.resize(matlik, None, fx=0.3, fy=0.3, interpolation=cv2.INTER_LANCZOS4)
+        res = cv2.resize(matlik, None, fx=0.5, fy=0.5, interpolation=cv2.INTER_LANCZOS4)
 
-    if time.time()-lastPost >= postSpacing:
-        lastPost = time.time()
-        CurrentWebsocketData['screen'] = res.tolist()
+        if time.time()-lastPost >= postSpacing:
+            lastPost = time.time()
+            CurrentWebsocketData = res.tolist()
+            comp = json.dumps(CurrentWebsocketData)
+            comp = zlib.compress(comp.encode())
+            await websocket.send(json.dumps({'type':'update','data':{'name':name,'screen':json.dumps(CurrentWebsocketData)}}))
 
-    if varScreenShow.get():
-        cv2.imshow('screen', res)
-        if not screenActive:
-            screenActive = True
-            btnShowScreen.configure(text="Hide Screen")
-    elif screenActive:
-        screenActive = False
-        cv2.destroyWindow('screen')
-        btnShowScreen.configure(text="Show Screen")
+        if varScreenShow.get():
+            cv2.imshow('screen', res)
+            if not screenActive:
+                screenActive = True
+                btnShowScreen.configure(text="Hide Screen")
+        elif screenActive:
+            screenActive = False
+            cv2.destroyWindow('screen')
+            btnShowScreen.configure(text="Show Screen")
+    
+# async def WebsocketHandler():
+#     print('stg0')
+#     while True:
+#         print('stg1')
+#         global CurrentWebsocketData
+#         print('stg2')
+#         jsonData = json.dumps({'name':name,'screen':CurrentWebsocketData})
+#         await websocket.send("h")
+#         print('stg3')
+#         data = await websocket.recv()
+#         print('stg4')
+#         print("DATA GOT???")
+#         print(data)
+
+asyncio.run(Main())
