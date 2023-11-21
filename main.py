@@ -88,28 +88,22 @@ def on_closing():
 
 loop = asyncio.get_event_loop()
 
-websocket = None
 async def MakeWebsocket():
-    global websocket
-    websocket = await client.connect(uri=BASEHOOKURL, ssl=CERT)
+    return await client.connect(uri=BASEHOOKURL, ssl=CERT)
 
-CurrentWebsocketData = {'name':name,'screen':[]}
+websocket = asyncio.run(MakeWebsocket())
+
+CurrentWebsocketData = []
 
 # websocket.enableTrace(True)
 async def WebsocketHandler():
-    print("runnin")
-    global websocket
     global CurrentWebsocketData
-    if websocket is None:
-        await MakeWebsocket()
-    print("stage1")
-    await websocket.send(json.dumps(CurrentWebsocketData))
-    print("stage2")
+    websocket.send(CurrentWebsocketData)
     data = await websocket.recv()
     print("DATA GOT???")
     print(data)
 
-loop.(WebsocketHandler())
+loop.create_task(WebsocketHandler())
 
 Thread(target=loop.run_forever).start()
 
